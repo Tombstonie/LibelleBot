@@ -1,80 +1,85 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# Название магазина
+# Назва магазину
 SHOP_NAME = "💎 Libelle 💎"
 
-# Категории товаров
+# Категорії товарів
 categories = {
-    "rings": "Кольца",
-    "necklaces": "Ожерелья",
-    "bracelets": "Браслеты"
+    "rings": "Кільця",
+    "necklaces": "Намиста",
+    "bracelets": "Браслети"
 }
 
-# Товары по категориям
+# Товари по категоріях
 products = {
     "rings": [
-        {"id": "ring1", "name": "Золотое кольцо", "price": 5000, "description": "Изысканное золотое кольцо для любого случая."},
-        {"id": "ring2", "name": "Серебряное кольцо", "price": 3000, "description": "Элегантное кольцо из серебра."}
+        {"id": "ring1", "name": "Золоте кільце", "price": 0, "description": "Вишукана золота каблучка на будь-який випадок."},
+        {"id": "ring2", "name": "Срібне кільце", "price": 0, "description": "Елегантна каблучка зі срібла."}
     ],
     "necklaces": [
-        {"id": "necklace1", "name": "Ожерелье с камнем", "price": 4500, "description": "Прекрасное ожерелье с натуральным камнем."}
+        {"id": "necklace1", "name": "Намисто з каменем", "price": 0, "description": "Чудове намисто з натуральним каменем."}
     ],
     "bracelets": [
-        {"id": "bracelet1", "name": "Браслет с камнями", "price": 4000, "description": "Браслет с натуральными камнями, ручная работа."}
+        {"id": "bracelet1", "name": "Браслет з камінням", "price": 0, "description": "Браслет з натуральними каменями, ручна робота."}
     ]
 }
 
-# /start — приветствие и категории
+# /start — привітання та категорії
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = f"Добро пожаловать в {SHOP_NAME}!\n\nВыберите категорию украшений:"
+    text = f"Ласкаво просимо до {SHOP_NAME}! ✨\n\nОберіть категорію прикрас:"
     keyboard = [[InlineKeyboardButton(name, callback_data=f"cat_{key}")] for key, name in categories.items()]
     await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Выбор категории — показать товары
+# Вибір категорії — показ товарів
 async def show_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+   
     cat_key = query.data.replace("cat_", "")
     items = products.get(cat_key, [])
-    
+   
     if not items:
-        await query.edit_message_text("В этой категории пока нет товаров.")
+        await query.edit_message_text("У цій категорії поки що немає товарів.")
         return
-    
+   
     keyboard = [[InlineKeyboardButton(item["name"], callback_data=f"prod_{item['id']}")] for item in items]
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="back")])
-    
-    await query.edit_message_text(f"Выберите товар из категории «{categories[cat_key]}»:", reply_markup=InlineKeyboardMarkup(keyboard))
+   
+    await query.edit_message_text(f"Оберіть прикрасу з категорії «{categories[cat_key]}»:", 
+                                  reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Показ информации о товаре
+# Показ інформації про товар
 async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+   
     prod_id = query.data.replace("prod_", "")
-    # Найдем товар
     product = None
     for items in products.values():
         for p in items:
             if p["id"] == prod_id:
                 product = p
                 break
-    if not product:
-        await query.edit_message_text("Товар не найден.")
-        return
+        if product:
+            break
     
-    text = f"**{product['name']}**\nЦена: {product['price']}₴\n\n{product['description']}"
-    keyboard = [[InlineKeyboardButton("🛒 Купить", callback_data=f"buy_{product['id']}")],
-                [InlineKeyboardButton("🔙 Назад", callback_data="back")]]
+    if not product:
+        await query.edit_message_text("Товар не знайдено.")
+        return
+   
+    text = f"*{product['name']}*\nЦіна: {product['price']} ₴\n\n{product['description']}"
+    keyboard = [
+        [InlineKeyboardButton("🛒 Купити", callback_data=f"buy_{product['id']}")],
+        [InlineKeyboardButton("🔙 Назад", callback_data="back")]
+    ]
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
-# Оформление покупки (пока просто сообщение)
+# Оформлення покупки
 async def buy_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+   
     prod_id = query.data.replace("buy_", "")
     product = None
     for items in products.values():
@@ -82,27 +87,35 @@ async def buy_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if p["id"] == prod_id:
                 product = p
                 break
-    if not product:
-        await query.edit_message_text("Товар не найден.")
-        return
+        if product:
+            break
     
-    await query.edit_message_text(f"Спасибо за покупку *{product['name']}*!\nНаш менеджер свяжется с вами для оформления заказа.", parse_mode="Markdown")
+    if not product:
+        await query.edit_message_text("Товар не знайдено.")
+        return
+   
+    await query.edit_message_text(
+        f"Дякуємо за покупку *{product['name']}*! 🎉\n\nНаш менеджер зв'яжеться з вами найближчим часом для оформлення замовлення та узгодження деталей доставки.",
+        parse_mode="Markdown"
+    )
 
-# Обработка кнопки назад
+# Кнопка «Назад»
 async def go_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    # Повернення до головного меню
     await start(update, context)
 
-# Создаем приложение
+# Створення додатка
 application = ApplicationBuilder().token("8247000975:AAGWPSSNYcygmHphOONHn4nPsOh2AQsmz4Q").build()
 
-# Хэндлеры
+# Хендлери
 application.add_handler(CommandHandler("start", start))
 application.add_handler(CallbackQueryHandler(show_category, pattern="^cat_"))
 application.add_handler(CallbackQueryHandler(show_product, pattern="^prod_"))
 application.add_handler(CallbackQueryHandler(buy_product, pattern="^buy_"))
 application.add_handler(CallbackQueryHandler(go_back, pattern="^back$"))
 
-# Запуск
+# Запуск бота
+print("Бот запущений...")
 application.run_polling()
